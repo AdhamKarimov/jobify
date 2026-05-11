@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+asyncpg
+pydantic
+fastapi-jwt-auth2
+werkzeug
+redis
+python-multipart
+python-dotenv
+greenlet
+psycopg2-binary
+alembic
