@@ -8,12 +8,14 @@ from vakansiya.router import router as vacancy_router
 from applies.router import router as apply_router
 from notification.router import router as notification_router
 from favorite.router import router as favorite_router
+from resume.router import router as resume_router
 
 from users.models import User
 from vakansiya.models import Vakansiya
 from applies.models import Apply
 from favorite.models import Favorite
 from notification.models import Notification
+from resume.models import Resume
 
 
 app = FastAPI(
@@ -33,6 +35,9 @@ async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+
+
+app.include_router(resume_router)
 
 app.include_router(users_router)
 app.include_router(vacancy_router)

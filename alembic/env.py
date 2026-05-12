@@ -14,6 +14,7 @@ from vakansiya.models import Vakansiya
 from applies.models import Apply
 from notification.models import Notification
 from favorite.models import Favorite
+from resume.models import Resume
 
 config = context.config
 fileConfig(config.config_file_name)

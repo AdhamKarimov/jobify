@@ -11,6 +11,7 @@ from applies.schema import ApplyCreate, ApplyResponse, ApplyStatusUpdate, ApplyS
 from users.models import User, UserRole
 from users.utilis import check_role
 from vakansiya.models import Vakansiya
+from notification.utilis import create_notification
 
 router = APIRouter(prefix="/apply", tags=["apply"])
 
@@ -56,53 +57,18 @@ async def apply_vacancy(
     await db.commit()
     await db.refresh(new_apply)
 
+    await create_notification(
+        db=db,
+        user_id=vacancy.author_id,
+        message=f"'{vacancy.title}' vakansiyasiga yangi ariza keldi"
+    )
+
     result = await db.execute(
         select(Apply)
         .options(joinedload(Apply.vacancy), joinedload(Apply.candidate))
         .filter(Apply.id == new_apply.id)
     )
     return result.scalars().first()
-
-
-@router.get("/my", response_model=List[ApplyResponse])
-async def my_applies(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(check_role(CANDIDATE_ROLES))
-):
-    result = await db.execute(
-        select(Apply)
-        .options(joinedload(Apply.vacancy), joinedload(Apply.candidate))
-        .filter(Apply.candidate_id == current_user.id)
-    )
-    return result.scalars().all()
-
-
-@router.get("/vacancy/{vacancy_id}", response_model=List[ApplyResponse])
-async def vacancy_applies(
-    vacancy_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(check_role(COMPANY_ROLES))
-):
-    result = await db.execute(
-        select(Vakansiya).filter(
-            Vakansiya.id == vacancy_id,
-            Vakansiya.is_deleted == False
-        )
-    )
-    vacancy = result.scalars().first()
-    if not vacancy:
-        raise HTTPException(status_code=404, detail="Vakansiya topilmadi")
-
-    if vacancy.author_id != current_user.id and current_user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Sizda ruxsat yo'q")
-
-    result = await db.execute(
-        select(Apply)
-        .options(joinedload(Apply.vacancy), joinedload(Apply.candidate))
-        .filter(Apply.vacancy_id == vacancy_id)
-    )
-    return result.scalars().all()
-
 
 
 @router.patch("/status/{apply_id}", response_model=ApplyResponse)
@@ -128,29 +94,15 @@ async def update_apply_status(
     await db.commit()
     await db.refresh(apply)
 
+    await create_notification(
+        db=db,
+        user_id=apply.candidate_id,
+        message=f"'{apply.vacancy.title}' vakansiyasiga arizangiz '{data.status}' bo'ldi"
+    )
+
     result = await db.execute(
         select(Apply)
         .options(joinedload(Apply.vacancy), joinedload(Apply.candidate))
         .filter(Apply.id == apply_id)
     )
     return result.scalars().first()
-
-
-@router.delete("/delete/{apply_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_apply(
-    apply_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(check_role(CANDIDATE_ROLES))
-):
-    result = await db.execute(
-        select(Apply).filter(Apply.id == apply_id)
-    )
-    apply = result.scalars().first()
-    if not apply:
-        raise HTTPException(status_code=404, detail="Apply topilmadi")
-
-    if apply.candidate_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Sizda ruxsat yo'q")
-
-    await db.delete(apply)
-    await db.commit()

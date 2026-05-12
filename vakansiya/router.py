@@ -147,3 +147,19 @@ async def delete_vacancy(
         raise HTTPException(status_code=403, detail="Sizda ruxsat yo'q")
     vacancy.is_deleted = True
     await db.commit()
+
+
+@router.get("/my", response_model=List[VacancyListResponse], summary="My Vacancies")
+async def my_vacancies(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(check_role(COMPANY_ROLES))
+):
+    result = await db.execute(
+        select(Vakansiya)
+        .filter(
+            Vakansiya.author_id == current_user.id,
+            Vakansiya.is_deleted == False
+        )
+        .order_by(Vakansiya.created_at.desc())
+    )
+    return result.scalars().all()

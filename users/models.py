@@ -56,6 +56,7 @@ class User(Base):
     company_profile = relationship("CompanyProfile", back_populates="user", uselist=False, cascade="all, delete")
     applies = relationship("Apply", back_populates="candidate", cascade="all, delete")
     favorites = relationship("Favorite", back_populates="user", cascade="all, delete")
+    resumes = relationship("Resume", back_populates="user", cascade="all, delete")
 
     def __repr__(self):
         return self.username
